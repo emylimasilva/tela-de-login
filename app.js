@@ -1,5 +1,9 @@
-﻿// Copilot, crie uma classe Usuario com atributos nome, email e senha.
-// Adicione um método para validar login e outro para exibir os dados do usuário.
+﻿// Uso dos modelos em `models/` (classes separadas)
+const Usuario = require('./models/Usuario');
+const Prato = require('./models/Prato');
+const Restaurante = require('./models/Restaurante');
+const Artista = require('./models/Artista');
+const Musica = require('./models/Musica');
 
 // Copilot, me explique o que é o 'constructor' e por que ele é usado nesta classe.
 // Resposta (Copilot): O `constructor` é um método especial em classes JavaScript que é executado automaticamente
@@ -23,29 +27,6 @@
 // Resposta (Copilot): `exibirInfo()` constrói e retorna uma string contendo informações não sensíveis do usuário
 // (nome e email). Essa string pode ser usada em logs, depuração, ou exibida na interface do usuário. Importante:
 // nunca inclua a senha em texto claro em retornos, logs ou UI. Em produção, armazene senhas apenas como hashes.
-
-class Usuario {
-  // O constructor inicializa os atributos do usuário.
-  constructor(nome, email, senha) {
-    // 'this' aponta para a instância do objeto
-    this.nome = nome;
-    this.email = email;
-    // Em produção, armazene apenas hashes de senha
-    this.senha = senha;
-  }
-
-  // Validação simples de login (comparação local).
-  // Em um sistema real isso aconteceria no servidor com senha comparada por hash.
-  validarLogin(emailDigitado, senhaDigitada) {
-    // '===' compara valor e tipo  é mais seguro que '==' e '=' é atribuição
-    return this.email === emailDigitado && this.senha === senhaDigitada;
-  }
-
-  // Retorna informações não sensíveis do usuário.
-  exibirInfo() {
-    return `Usuário: ${this.nome}, Email: ${this.email}`;
-  }
-}
 
 // Exemplo de uso (dados falsos para teste)
 const usuario1 = new Usuario('Emilly Silva', 'emilly@example.com', 'senha123');
