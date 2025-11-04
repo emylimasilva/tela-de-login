@@ -184,3 +184,6 @@ console.log('\n--- Menu do Restaurante ---');
 console.log(restaurante.listarMenu());
 console.log('\n--- Músicas do Artista ---');
 console.log(artista.listarMusicas());
+
+// Explicações extras (hashing/salting, edge cases, testes) foram adicionadas em NOTAS.md
+// Consulte `NOTAS.md` para detalhes de segurança e casos de teste sugeridos.
