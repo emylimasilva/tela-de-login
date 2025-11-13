@@ -1,58 +1,259 @@
-﻿// Uso dos modelos em `models/` (classes separadas)
-const Usuario = require('./models/Usuario');
-const Prato = require('./models/Prato');
-const Restaurante = require('./models/Restaurante');
-const Artista = require('./models/Artista');
-const Musica = require('./models/Musica');
+﻿/**
+ * app.js - Lógica de Aplicação (Integração com Formulários HTML)
+ * 
+ * Este arquivo conecta a classe Usuario com os formulários HTML.
+ * Usa LocalStorage para armazenar dados (Semana 1 - antes de MongoDB).
+ * 
+ * FLUXO:
+ * 1. Usuário preenche formulário (HTML)
+ * 2. handleCadastro() ou handleLogin() é chamado
+ * 3. Nova instância de Usuario é criada
+ * 4. Dados são salvos em LocalStorage (JSON)
+ * 5. Interface atualiza com feedback
+ */
 
-// Copilot, me explique o que é o 'constructor' e por que ele é usado nesta classe.
-// Resposta (Copilot): O `constructor` é um método especial em classes JavaScript que é executado automaticamente
-// quando você cria uma nova instância da classe (com `new Usuario(...)`). Ele serve para inicializar o estado
-// do objeto — ou seja, atribuir valores iniciais às propriedades como `nome`, `email` e `senha`. Sem o constructor
-// você teria que atribuir manualmente essas propriedades após criar o objeto.
+// ============================================
+// ARMAZENAMENTO EM LocalStorage
+// ============================================
+// Copilot, o que é LocalStorage e para que serve?
+// Resposta (Copilot): LocalStorage é um armazenamento no navegador que persiste
+// dados mesmo após o navegador fechar. Útil para dados não sensíveis em Semana 1.
+// Em produção, usar banco de dados real (MongoDB) em Semana 2.
 
-// Copilot, o que significa o 'this' dentro do constructor?
-// Resposta (Copilot): Em métodos de instância (incluindo o `constructor`), `this` refere-se à instância atual
-// da classe — o objeto que está sendo construído ou cujo método está sendo executado. Usar `this.nome` cria ou
-// acessa a propriedade `nome` daquela instância específica, diferente de outras instâncias da classe.
+const STORAGE_KEY = 'usuarios_app';
 
-// Copilot, por que o método validarLogin precisa usar '===' ao invés de '='?
-// Resposta (Copilot): Em JavaScript `=` é o operador de atribuição (atribui valores), `==` compara com coerção
-// de tipos (pode converter tipos automaticamente) e `===` é igualdade estrita (compara valor e tipo). Usar `===`
-// evita resultados inesperados causados pela coerção de tipos — por exemplo `0 == '0'` é true, mas `0 === '0'` é false.
-// Usar `=` por engano quebraria a lógica pois sobrescreveria variáveis em vez de compará-las. Para segurança e
-// previsibilidade das comparações, prefira `===`.
+/**
+ * Carrega lista de usuários do LocalStorage
+ * Retorna array de objetos ou array vazio se não houver dados
+ */
+function carregarUsuarios() {
+    try {
+        const dados = localStorage.getItem(STORAGE_KEY);
+        return dados ? JSON.parse(dados) : [];
+    } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+        return [];
+    }
+}
 
-// Copilot, o que este método exibirInfo está retornando e onde ele pode ser usado?
-// Resposta (Copilot): `exibirInfo()` constrói e retorna uma string contendo informações não sensíveis do usuário
-// (nome e email). Essa string pode ser usada em logs, depuração, ou exibida na interface do usuário. Importante:
-// nunca inclua a senha em texto claro em retornos, logs ou UI. Em produção, armazene senhas apenas como hashes.
+/**
+ * Salva lista de usuários no LocalStorage
+ * Recebe array de usuários (já em formato JSON-pronto)
+ */
+function salvarUsuarios(usuarios) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(usuarios));
+    } catch (error) {
+        console.error('Erro ao salvar usuários:', error);
+    }
+}
 
-// Exemplo de uso (dados falsos para teste)
+// ============================================
+// FUNÇÕES DE INTERFACE (Abas e Mensagens)
+// ============================================
+
+/**
+ * Alterna entre abas (Login / Cadastro)
+ * Copilot, como este padrão de toggle de abas funciona?
+ * Resposta: Iteramos por todas as abas, removemos classe 'active',
+ * depois adicionamos 'active' apenas à aba clicada. Mesmo para botões.
+ */
+function mostrarAba(nomeAba) {
+    // Esconde todas as abas
+    document.querySelectorAll('.tab-content').forEach(aba => {
+        aba.classList.remove('active');
+    });
+
+    // Remove destaque de todos os botões
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Mostra aba selecionada
+    document.getElementById(nomeAba).classList.add('active');
+
+    // Destaca botão correspondente
+    event.target.classList.add('active');
+}
+
+/**
+ * Mostra mensagem de sucesso ou erro
+ */
+function mostrarMensagem(elementId, mensagem, tipo) {
+    const elemento = document.getElementById(elementId);
+    elemento.textContent = mensagem;
+    elemento.className = `message ${tipo}`;
+
+    // Remove mensagem após 4 segundos
+    setTimeout(() => {
+        elemento.textContent = '';
+        elemento.className = 'message';
+    }, 4000);
+}
+
+/**
+ * Atualiza a lista de usuários na interface
+ */
+function atualizarListaUsuarios() {
+    const usuarios = carregarUsuarios();
+    const lista = document.getElementById('usuariosList');
+
+    if (usuarios.length === 0) {
+        lista.innerHTML = '<p class="empty">Nenhum usuário cadastrado ainda...</p>';
+        return;
+    }
+
+    lista.innerHTML = usuarios
+        .map(user => `
+            <div class="usuario-item">
+                <strong>${user.nome}</strong> (${user.email})
+            </div>
+        `)
+        .join('');
+}
+
+// ============================================
+// FUNÇÕES DE NEGÓCIO (Cadastro e Login)
+// ============================================
+
+/**
+ * Manipula submissão do formulário de CADASTRO
+ * Copilot, por que usamos event.preventDefault()?
+ * Resposta: preventDefault() evita o comportamento padrão do form (recarregar página).
+ * Assim controlamos o que acontece com JavaScript.
+ */
+function handleCadastro(event) {
+    event.preventDefault();
+
+    const nome = document.getElementById('cadastroNome').value.trim();
+    const email = document.getElementById('cadastroEmail').value.trim();
+    const senha = document.getElementById('cadastroPassword').value;
+    const confirmSenha = document.getElementById('cadastroConfirm').value;
+
+    // Validações
+    if (!nome || !email || !senha || !confirmSenha) {
+        mostrarMensagem('cadastroMessage', 'Preencha todos os campos!', 'error');
+        return;
+    }
+
+    if (senha !== confirmSenha) {
+        mostrarMensagem('cadastroMessage', 'As senhas não conferem!', 'error');
+        return;
+    }
+
+    if (senha.length < 6) {
+        mostrarMensagem('cadastroMessage', 'Senha deve ter pelo menos 6 caracteres!', 'error');
+        return;
+    }
+
+    // Carrega usuários existentes
+    const usuariosExistentes = carregarUsuarios();
+
+    // Verifica se email já está cadastrado
+    const emailJaExiste = usuariosExistentes.some(u => u.email === email);
+    if (emailJaExiste) {
+        mostrarMensagem('cadastroMessage', 'Este email já está cadastrado!', 'error');
+        return;
+    }
+
+    // Cria novo usuário usando a classe Usuario
+    // Copilot, como a instância de Usuario funciona aqui?
+    // Resposta: new Usuario(...) chama o constructor que inicializa
+    // as propriedades. Depois usamos JSON.stringify() para converter
+    // o objeto em string e salvar no LocalStorage.
+    const novoUsuario = new Usuario(nome, email, senha);
+
+    // Salva no LocalStorage
+    usuariosExistentes.push({
+        nome: novoUsuario.nome,
+        email: novoUsuario.email,
+        senha: novoUsuario.senha, // ⚠️ NUNCA FAÇA ISSO EM PRODUÇÃO! Ver NOTAS.md
+    });
+    salvarUsuarios(usuariosExistentes);
+
+    // Feedback ao usuário
+    mostrarMensagem('cadastroMessage', `✓ Usuário ${nome} cadastrado com sucesso!`, 'success');
+
+    // Limpa formulário
+    document.getElementById('cadastroForm').reset();
+
+    // Atualiza lista
+    atualizarListaUsuarios();
+
+    // Volta para aba de login
+    setTimeout(() => {
+        document.querySelector('.tab-button').click();
+    }, 1500);
+}
+
+/**
+ * Manipula submissão do formulário de LOGIN
+ */
+function handleLogin(event) {
+    event.preventDefault();
+
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginPassword').value;
+
+    // Carrega usuários
+    const usuarios = carregarUsuarios();
+
+    // Procura usuário com este email
+    const usuarioEncontrado = usuarios.find(u => u.email === email);
+
+    if (!usuarioEncontrado) {
+        mostrarMensagem('loginMessage', 'Email não encontrado!', 'error');
+        return;
+    }
+
+    // Cria instância da classe Usuario e valida login
+    // Copilot, por que criamos uma instância só para validar?
+    // Resposta: Porque a lógica de validação está no método validarLogin().
+    // Isso segue o princípio de encapsulamento da POO.
+    const usuario = new Usuario(usuarioEncontrado.nome, usuarioEncontrado.email, usuarioEncontrado.senha);
+
+    if (usuario.validarLogin(email, senha)) {
+        mostrarMensagem('loginMessage', `✓ Bem-vindo, ${usuarioEncontrado.nome}!`, 'success');
+        document.getElementById('loginForm').reset();
+        
+        // Aqui você poderia redirecionar para dashboard, etc.
+        console.log('Login bem-sucedido:', usuario.exibirInfo());
+    } else {
+        mostrarMensagem('loginMessage', 'Email ou senha incorretos!', 'error');
+    }
+}
+
+/**
+ * Limpa todos os dados do LocalStorage
+ */
+function limparLocalStorage() {
+    if (confirm('Deseja realmente limpar todos os usuários?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        atualizarListaUsuarios();
+        mostrarMensagem('loginMessage', 'Dados apagados!', 'success');
+    }
+}
+
+// ============================================
+// INICIALIZAÇÃO DA PÁGINA
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    atualizarListaUsuarios();
+    console.log('Aplicação iniciada. LocalStorage em uso (Semana 1).');
+});
+
+// ============================================
+// EXEMPLOS DE USO - DADOS FALSOS (para testes)
+// ============================================
+/*
 const usuario1 = new Usuario('Emilly Silva', 'emilly@example.com', 'senha123');
-
-// Copilot, explique passo-a-passo o que acontece nas linhas abaixo.
 console.log(usuario1.exibirInfo());
-console.log('Login válido?', usuario1.validarLogin('emilly@example.com', 'senha123')); // deve ser true
+console.log('Login válido?', usuario1.validarLogin('emilly@example.com', 'senha123'));
 
-// As classes e explicações foram movidas para a pasta `models/`.
-// Este arquivo mantém apenas exemplos de uso e referências às notas.
-
-// Pequeno exemplo demonstrando uso das classes
 const prato1 = new Prato('Risotto', 42.5, ['arroz', 'caldo', 'queijo']);
-const prato2 = new Prato('Salada', 18.0, ['alface', 'tomate']);
+console.log(prato1.exibirInfo());
+
 const restaurante = new Restaurante('Bom Sabor', 'Rua A, 123');
 restaurante.adicionarPrato(prato1);
-restaurante.adicionarPrato(prato2);
-
-const artista = new Artista('Banda Exemplo', 'Rock');
-const musica1 = new Musica('Canção A', 210);
-artista.adicionarMusica(musica1);
-
-console.log('\n--- Menu do Restaurante ---');
 console.log(restaurante.listarMenu());
-console.log('\n--- Músicas do Artista ---');
-console.log(artista.listarMusicas());
-
-// Explicações extras (hashing/salting, edge cases, testes) foram adicionadas em NOTAS.md
-// Consulte `NOTAS.md` para detalhes de segurança e casos de teste sugeridos.
+*/

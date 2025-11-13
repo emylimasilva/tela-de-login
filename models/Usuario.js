@@ -24,4 +24,9 @@ class Usuario {
   }
 }
 
-module.exports = Usuario;
+// Compatibilidade: Funciona tanto em Node.js (module.exports) quanto em navegador (window.Usuario)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = Usuario;
+} else {
+  window.Usuario = Usuario;
+}
